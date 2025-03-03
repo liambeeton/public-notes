@@ -1,0 +1,154 @@
+# How I Built My Blog
+
+If you've been considering starting a blog, you might feel overwhelmed by the multitude of tools and technologies available. We're living in an age of abundance, where options abound.
+
+In this article, I'll dissect the workings of my blog to guide you in building something similar for yourself. I'll also address the most frequently asked questions I've received over the years. While not a tutorial, this should provide you with a comprehensive roadmap to follow.
+
+## What is the Tech Stack?
+
+This blog is a [Next.js](https://nextjs.org/) application.
+
+When using Next.js, you have several options for page rendering: you can opt for "on-demand" rendering (server-side rendering) or pre-render pages ahead of time (static site generation). I've chosen to pre-generate all blog posts when the site is built.
+
+The pre-generation is handled by [Nextra](https://nextra.site/), which is a static site generation framework from Next.js, that integrates well with the rest of the tech stack choices.
+
+I host this blog on [Vercel](https://vercel.com/). Initially, I selected them because they're the creators of Next.js, and I assumed it would be well-optimised. Honestly, their platform is fantastic.
+
+[Cloudflare's](https://www.cloudflare.com/) comprehensive suite of security and performance features makes it a valuable tool for protecting and optimising my blog. I can access these benefits for free, including DDoS Protection, Firewall, Content Delivery Network (CDN), SSL/TLS Encryption, Bot Management, DNS Management, and Analytics.
+
+But the most critical part of this stack is [MDX](https://mdxjs.com/).
+
+## What is MDX?
+
+MDX is an extension of Markdown that allows you to import and use custom React components.
+
+Chances are, you've encountered Markdown even if you've never written it yourself. It's a commonly used format—think of all those README.md files displayed on GitHub repositories; they're all written in Markdown!
+
+Here's what Markdown looks like:
+
+```markdown
+# Welcome to my MDX page!
+
+This is some **bold** and _italics_ text.
+
+This is a list in markdown:
+
+- One
+- Two
+- Three
+```
+
+When using Markdown in a web application, there's a "compile" step; the Markdown needs to be transformed into HTML, so that it can be understood by the browser. Those asterisks get turned into a `<strong>` tag, the list gets turned into a `<ul>`, and each paragraph gets a `<p>` tag.
+
+This is great, but it means we're limited to a handful of HTML elements that Markdown is aware of.
+
+MDX takes the format a step further, and allows us to include our own elements, in the form of React components:
+
+```markdown
+import { MyComponent } from 'my-component'
+
+# Welcome to my MDX page!
+
+This is some **bold** and _italics_ text.
+
+This is a list in markdown:
+
+- One
+- Two
+- Three
+
+Checkout my React component:
+
+<MyComponent />
+```
+
+## Search Engine Optimisation
+
+In the hope that people will actually read this blog, I have done everything technically possible to ensure that it will be ranked and visible on Google.
+
+The usuals of setting up an account and property on [Google Analytics](https://analytics.google.com/) and also adding the property to [Google Search Console](https://search.google.com/search-console/) have been done.
+
+### Add Google Analytics
+
+I added `_app.mdx` and `_document.tsx` in the `pages` folder. Made a `lib` folder and saved `gtag.ts` in this folder.
+
+```js filename="_app.mdx" copy
+import { useEffect } from 'react'
+import { useRouter } from 'next/router'
+import * as gtag from '../lib/gtag'
+
+export default function App({ Component, pageProps }) {
+  const router = useRouter()
+  useEffect(() => {
+    const handleRouteChange = (url) => {
+      gtag.pageview(url)
+    }
+    router.events.on('routeChangeComplete', handleRouteChange)
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange)
+    }
+  }, [router.events])
+  return <Component {...pageProps} />
+}
+```
+
+```js filename="_document.tsx" copy
+import React, { ReactElement } from 'react'
+import Document, { Html, Head, Main, NextScript } from 'next/document'
+import { GA_TRACKING_ID } from '../lib/gtag'
+
+export default class MyDocument extends Document {
+  render(): ReactElement {
+    return (
+      <Html>
+        <Head>
+          {/* Global Site Tag (gtag.js) - Google Analytics */}
+          <script
+            async
+            src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`}
+          />
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `window.dataLayer = window.dataLayer || [];
+                      function gtag(){dataLayer.push(arguments);}
+                      gtag('js', new Date());
+                      gtag('config', '${GA_TRACKING_ID}', {
+                        page_path: window.location.pathname,
+                      });`,
+            }}
+          />
+        </Head>
+        <body>
+          <Main />
+          <NextScript />
+        </body>
+      </Html>
+    )
+  }
+}
+```
+
+Remember to add the [type definitions](https://www.npmjs.com/package/@types/gtag.js) with `pnpm add -D @types/gtag.js` command.
+
+```js filename="gtag.ts" copy
+export const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID
+
+// https://developers.google.com/analytics/devguides/collection/gtagjs/pages
+export const pageview = (url: URL) => {
+  window.gtag('config', GA_TRACKING_ID, {
+    page_path: url,
+  })
+}
+
+// https://developers.google.com/analytics/devguides/collection/gtagjs/events
+export const event = (
+  action: Gtag.EventNames,
+  { event_category, event_label, value }: Gtag.EventParams
+) => {
+  window.gtag('event', action, {
+    event_category: event_category,
+    event_label: event_label,
+    value: value,
+  })
+}
+```
