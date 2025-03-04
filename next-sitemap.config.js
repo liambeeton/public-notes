@@ -1,6 +1,6 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: 'https://www.liambeeton.com',
+  siteUrl: 'https://liambeeton.com',
   changefreq: 'weekly',
   priority: '0.5',
   generateIndexSitemap: false,
