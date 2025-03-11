@@ -1,0 +1,213 @@
+# Building a Lightweight RAG System with LlamaIndex, Ollama, and Qdrant
+
+In today's blog post, I'll break down an elegant implementation of a Retrieval Augmented Generation (RAG) system using open-source tools and local models. This approach gives you complete control over your data and removes the need for expensive API calls.
+
+## The Code Walkthrough
+
+The code we're examining creates a simple but powerful RAG pipeline that:
+1. Uses Ollama to run a local LLM (Mistral)
+2. Embeds documents with a HuggingFace model
+3. Stores vectors in Qdrant (a vector database)
+4. Performs semantic search and generates responses
+
+Let's analyze each component:
+
+### Setting Up the Foundation
+
+```python
+from pathlib import Path
+import qdrant_client
+from llama_index.core import VectorStoreIndex, StorageContext, Settings
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.ollama import Ollama
+from llama_index.readers.json import JSONReader
+from llama_index.vector_stores.qdrant import QdrantVectorStore
+```
+
+The imports show we're using LlamaIndex as our orchestration framework, which makes building RAG systems significantly easier. Pathlib helps with file handling, while Qdrant serves as our vector database.
+
+### Configuring the Models
+
+```python
+Settings.llm = Ollama(model="mistral", request_timeout=120.0)
+Settings.embed_model = HuggingFaceEmbedding(
+    model_name="BAAI/bge-small-en-v1.5"
+)
+```
+
+Two critical components are set up here:
+- The LLM: We're using Mistral through Ollama, a tool for running models locally
+- The embedding model: BGE-small-en from BAAI, which creates vector representations of text
+
+The timeout of 120 seconds gives Mistral plenty of time to generate responses, which is important for longer queries.
+
+### Loading and Indexing Data
+
+```python
+loader = JSONReader()
+documents = loader.load_data(Path('tinytweets.json'))
+
+client = qdrant_client.QdrantClient(path="./qdrant_data")
+vector_store = QdrantVectorStore(client=client, collection_name="tweets")
+storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+```
+
+This section:
+1. Loads tweets from a JSON file using LlamaIndex's JSONReader
+2. Creates a local Qdrant database to store vectors persistently
+3. Sets up the storage context with our Qdrant vector store
+4. Creates the index by processing and embedding all documents
+
+The beauty of storing in Qdrant is that embeddings persist between runs, saving computational resources.
+
+### Query Execution
+
+```python
+query_engine = index.as_query_engine()
+response = query_engine.query("What does the author think about Star Trek? In One line")
+print(response)
+```
+
+Finally, we create a query engine from our index and ask a question. The system will:
+1. Convert our question into an embedding
+2. Find the most relevant tweets in the vector store
+3. Use Mistral to generate a concise answer based on those tweets
+
+## Working with Existing Vector Stores
+
+Let's now examine the second snippet, which shows how to query an existing vector store:
+
+```python
+# Import modules
+import qdrant_client
+from llama_index.core import VectorStoreIndex, Settings
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.ollama import Ollama
+from llama_index.vector_stores.qdrant import QdrantVectorStore
+
+# Initialize Ollama and configure Settings
+Settings.llm = Ollama(model="mistral", request_timeout=120.0)
+Settings.embed_model = HuggingFaceEmbedding(
+    model_name="BAAI/bge-small-en-v1.5"
+)
+
+# Create Qdrant client and vector store
+client = qdrant_client.QdrantClient(path="./qdrant_data")
+vector_store = QdrantVectorStore(client=client, collection_name="tweets")
+
+# Create VectorStoreIndex and query engine with a similarity threshold of 20
+index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
+query_engine = index.as_query_engine(similarity_top_k=20)
+
+# Perform a query and print the response
+response = query_engine.query("What does the author think about Star Trek? In One line")
+print(response)
+```
+
+### Key Differences in the Second Approach
+
+1. **Initializing from Existing Vectors**: Instead of loading and embedding documents again (`from_documents`), we're using `from_vector_store` to work with previously embedded data.
+
+2. **Simplified Imports**: The second snippet excludes the document loader since we're working with already processed data.
+
+3. **Retrieval Parameter Tuning**: The `similarity_top_k=20` parameter is crucial - it tells the system to retrieve the 20 most relevant document chunks for each query, which can significantly affect result quality.
+
+### Production Workflow Implications
+
+This two-phase approach (index creation followed by querying) demonstrates an efficient production workflow:
+
+1. **Initial Indexing (First Script)**:
+   - Run once when new data is available
+   - Handles resource-intensive embedding creation
+   - Stores vectors persistently in Qdrant
+
+2. **Ongoing Queries (Second Script)**:
+   - Much faster execution since embeddings already exist
+   - Can be deployed as an API or integrated into applications
+   - Only needs to embed the query text, not entire documents
+
+## Fine-tuning Retrieval Performance
+
+The `similarity_top_k` parameter deserves special attention. Setting it to 20 means:
+
+- More context is provided to the LLM (20 chunks vs. LlamaIndex's default 2)
+- Better coverage of potentially relevant information
+- But also potentially more noise in the retrieved results
+
+Finding the optimal `top_k` value for your specific use case is critical:
+- Too low: Missing important context
+- Too high: Introducing noise and using unnecessary tokens
+
+A typical approach is to start with 3-5 chunks and gradually increase until result quality plateaus.
+
+## Advanced RAG Techniques
+
+Building on our basic implementation, here are some advanced techniques to consider:
+
+### 1. Hybrid Search
+
+Combining vector search with keyword-based (BM25) search can improve results:
+
+```python
+# Example of hybrid search with LlamaIndex
+from llama_index.core.postprocessor import SimilarityPostprocessor
+from llama_index.core.retrievers import VectorIndexRetriever, KeywordIndexRetriever
+
+vector_retriever = VectorIndexRetriever(index=index)
+keyword_retriever = KeywordIndexRetriever(index=index)
+
+hybrid_retriever = hybrid_fusion([vector_retriever, keyword_retriever],
+                                 weights=[0.7, 0.3])
+query_engine = index.as_query_engine(retriever=hybrid_retriever)
+```
+
+### 2. Reranking Retrieved Documents
+
+Adding a reranker model can significantly improve relevance:
+
+```python
+from llama_index.postprocessor.cohere_rerank import CohereRerank
+
+reranker = CohereRerank(api_key="your_api_key", top_n=5)
+query_engine = index.as_query_engine(
+    similarity_top_k=20,
+    node_postprocessors=[reranker]
+)
+```
+
+### 3. Optimizing with Query Transformations
+
+For complex queries, consider query transformations:
+
+```python
+from llama_index.indices.query.query_transform import HyDE
+
+hyde = HyDE(llm=Settings.llm)
+query_engine = index.as_query_engine(
+    query_transform=hyde
+)
+```
+
+## Deployment Considerations
+
+For production deployment, consider these optimizations:
+
+1. **Vectorize Once, Query Often**: The second code snippet is perfect for this pattern, only connecting to existing vectors.
+
+2. **Batch Processing**: For large datasets, process documents in batches to avoid memory issues.
+
+3. **Sharding**: With massive data, consider sharding your vector database.
+
+4. **Caching**: Implement a query cache to avoid recomputing common queries.
+
+5. **Monitoring**: Track metrics like latency, relevance scores, and token usage.
+
+## Conclusion
+
+These two code snippets demonstrate the full lifecycle of a RAG system - from initial document processing to efficient querying of existing vector stores. The approach provides a compelling blueprint for building semantic search and question-answering systems with complete data sovereignty.
+
+By combining the power of local LLMs like Mistral with efficient vector stores like Qdrant, you can create powerful information retrieval systems without the complexity and cost of commercial solutions. The flexibility of LlamaIndex's abstractions makes this approach adaptable to many different use cases, from document search to chatbots to knowledge management systems.
+
+Whether you're building a prototype or a production system, this pattern gives you a solid foundation to build upon, with clear paths for optimization and scaling**.**
