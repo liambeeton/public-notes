@@ -2,4 +2,6 @@
 
 export default {
   'building-bulletproof-backups': 'Building Bulletproof Backups',
+  'the-complete-macbook-pro-developer-setup-guide':
+    'The Complete MacBook Pro Developer Setup Guide',
 }
