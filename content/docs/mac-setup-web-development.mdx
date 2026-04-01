@@ -1,0 +1,577 @@
+---
+title: Mac Setup for Web Development
+description: My personal macOS setup for web development — Homebrew, iTerm2, Oh My Zsh, Starship, VS Code, Git with delta, Volta for Node, and more.
+---
+
+This is my personal macOS setup for web development. Everything here is scripted in my [dotfiles](https://github.com/liambeeton/dotfiles) — you can run a single command to apply it all on a fresh machine.
+
+## One-Command Install
+
+Clone the repo and run the install script:
+
+```sh
+git clone https://github.com/liambeeton/dotfiles ~/.dotfiles
+cd ~/.dotfiles
+./install.sh
+```
+
+Or install directly without cloning first:
+
+```sh
+curl -#L https://github.com/liambeeton/dotfiles/tarball/master | tar -xzv -C ~/.dotfiles --strip-components=1
+~/.dotfiles/install.sh
+```
+
+The script applies macOS defaults, installs Homebrew, CLI packages, GUI apps, Oh My Zsh, VS Code extensions, Git config, and Node via Volta — in order.
+
+## MacBook Specification
+
+- MacBook Pro 16-inch (M4 Max)
+- Apple M4 Max — 16-core CPU, 40-core GPU, 16-core Neural Engine
+- 128 GB unified memory
+- 8 TB SSD
+- Liquid Retina XDR display
+- QWERTY — English (International)
+- macOS Sequoia
+
+## macOS System Preferences
+
+- **Appearance** — Dark Mode; Show Scroll Bars → Always
+- **Dock** — Auto-hide; smaller size; remove most apps; Show Percentage for battery
+- **Display** — Night Shift
+- **Security** — Touch ID; FileVault on
+- **Notifications** — Off, except Calendar
+- **Siri** — Disabled
+- **Trackpad** — Tap to Click; Speed Max; Point & Click → Look up off; Notification Centre off
+- **Keyboard** — Disable auto-capitalise, smart quotes, double-space period; Spotlight shortcut off (Raycast takes over)
+- **Mission Control** — Hot Corners: all off
+- **Finder** — Show all extensions; Show hidden files; New window → Downloads; remove unused sidebar items; Tags off
+- **Accessibility** — Scroll Speed: Max
+
+## macOS Defaults (Terminal)
+
+These are applied automatically by `macos/defaults.sh`:
+
+```sh
+# Screenshots as JPG instead of PNG
+defaults write com.apple.screencapture type jpg
+
+# Don't reopen PDFs when opening a new one
+defaults write com.apple.Preview ApplePersistenceIgnoreState YES
+
+# Show Library folder
+chflags nohidden ~/Library
+
+# Show hidden files
+defaults write com.apple.finder AppleShowAllFiles YES
+
+# Show path bar and status bar in Finder
+defaults write com.apple.finder ShowPathbar -bool true
+defaults write com.apple.finder ShowStatusBar -bool true
+```
+
+## Hostname
+
+Set the machine name to `Nomad`:
+
+```sh
+sudo scutil --set ComputerName "Nomad"
+sudo scutil --set HostName "Nomad"
+sudo scutil --set LocalHostName "Nomad"
+```
+
+## Homebrew
+
+Install [Homebrew](https://brew.sh) as the macOS package manager:
+
+```sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+(echo; echo 'eval "$(/opt/homebrew/bin/brew shellenv)"') >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
+brew update && brew upgrade
+```
+
+### CLI Packages
+
+```sh
+brew install \
+  awscli \
+  azure-cli \
+  difftastic \
+  direnv \
+  dive \
+  dotnet \
+  eza \
+  flyway \
+  git \
+  git-delta \
+  git-lfs \
+  go \
+  golangci-lint \
+  gotestsum \
+  gnupg \
+  gradle \
+  helm \
+  jenv \
+  jq \
+  k6 \
+  kubectl \
+  maven \
+  minikube \
+  mkcert \
+  ollama \
+  openjdk@11 \
+  openjdk@17 \
+  openjdk@21 \
+  openssl@3 \
+  ripgrep \
+  starship \
+  tailscale \
+  tfenv \
+  tgenv \
+  tree \
+  uv \
+  wget \
+  ykman
+```
+
+### GUI Apps
+
+```sh
+brew install --cask \
+  1password \
+  arq \
+  bartender \
+  brave-browser \
+  charles \
+  claude \
+  claude-code \
+  discord \
+  docker-desktop \
+  firefox \
+  font-fira-code \
+  font-hack-nerd-font \
+  font-jetbrains-mono \
+  font-source-code-pro \
+  foobar2000 \
+  google-chrome \
+  imageoptim \
+  insomnia \
+  iterm2 \
+  jetbrains-toolbox \
+  little-snitch \
+  maccy \
+  ngrok \
+  notion \
+  postman \
+  protonvpn \
+  raycast \
+  rectangle \
+  slack \
+  soapui \
+  spotify \
+  tailscale-app \
+  typora \
+  visual-studio-code \
+  vlc \
+  whatsapp \
+  wireshark-app \
+  yubico-authenticator \
+  zoom
+```
+
+## GUI Applications
+
+- **1Password** — password manager; enable Touch ID
+- **Arq** — local and cloud backups
+- **Bartender** — menu bar management
+- **Raycast** — Spotlight replacement; bind to CMD + Space (disable Spotlight shortcut first); enable File Search, Snippets, System
+- **Brave** — primary browser for personal browsing
+- **Google Chrome** — web development; enable dark mode; DevTools → dark mode; Network → Fetch/XHR only
+- **Firefox** — secondary browser for dev testing
+- **Charles** — HTTP proxy for debugging API traffic
+- **Docker Desktop** — containerised databases and services; enable Docker Compose
+- **ImageOptim** — compress images before committing
+- **Insomnia** — REST and GraphQL API testing
+- **iTerm2** — terminal (see iTerm2 section)
+- **JetBrains Toolbox** — manage JetBrains IDEs
+- **Little Snitch** — outbound firewall
+- **Maccy** — clipboard manager; enable Launch at Login
+- **Notion** — notes and project management
+- **Postman** — API testing
+- **ProtonVPN** — VPN
+- **Raycast** — launcher
+- **Rectangle** — window management shortcuts
+- **Slack** — team messaging
+- **Typora** — minimal Markdown editor
+- **Visual Studio Code** — primary editor (see VS Code section)
+- **VLC** — video player; set as default
+- **Wireshark** — network packet analysis
+- **Yubico Authenticator** — hardware 2FA with YubiKey
+- **Zoom** — video calls
+
+## iTerm2
+
+Configuration for a clean, fullscreen terminal experience:
+
+- Preferences → General → Window
+  - Unselect "Native full screen windows"
+  - Select "Close windows when closing an app"
+- Appearance → Windows → Hide scrollbars
+- Tabs → unselect "Show tab bar in fullscreen"
+- Dimming → unselect all
+- Profiles → Window: Transparency 30; Style: Full Screen; Screen: Main Screen
+- Profiles → Advanced: Semantic History → Open with VS Code; Natural Text Editing
+- Profiles → Text → Font: Hack Nerd Font Mono
+- Bring to fullscreen: `⌘ + Enter`
+
+## Oh My Zsh
+
+Install Oh My Zsh and required plugins:
+
+```sh
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+
+# Plugins
+git clone https://github.com/zsh-users/zsh-autosuggestions \
+  ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+
+git clone https://github.com/zsh-users/zsh-completions \
+  ${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions
+
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git \
+  ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+
+# z — jump to frequently used directories
+wget https://raw.githubusercontent.com/rupa/z/master/z.sh -O ~/z.sh
+```
+
+### Starship Theme
+
+Install Starship via Homebrew (already in the brew list above), then activate it:
+
+```sh
+echo 'eval "$(starship init zsh)"' >> ~/.zshrc
+```
+
+### `.zshrc`
+
+```sh
+export ZSH="$HOME/.oh-my-zsh"
+
+plugins=(
+  direnv git kubectl pyenv z
+  zsh-autosuggestions zsh-syntax-highlighting
+)
+
+fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
+source $ZSH/oh-my-zsh.sh
+
+# Navigation
+alias dev="cd ~/Developer"
+alias dot="cd ~/.dotfiles"
+
+# System
+alias ip="ipconfig getifaddr en0"
+alias hostsconfig="sudo nano /etc/hosts"
+alias loc="npx sloc --format cli-table --format-option head --exclude 'build|\.svg$\.xml' ./"
+
+# Zsh config
+alias zshconfig="code ~/.zshrc"
+alias zshsource="source ~/.zshrc"
+alias ohmyzsh="cd ~/.oh-my-zsh"
+
+# SSH
+alias sshhome="cd ~/.ssh"
+alias sshconfig="code ~/.ssh/config"
+
+# Git
+alias gitconfig="code ~/.gitconfig"
+alias gits="git status"
+alias gitd="git diff"
+alias gitl="git lg"
+alias gita="git add ."
+alias gitc="cz commit"
+alias gitf='git commit --fixup $(git log -1 --format=%H)'
+alias gitn='git branch | grep -v "develop" | grep -v "master" | grep -v "main" | xargs git branch -D'
+
+# Docker
+alias docv="docker ps -a"
+alias docu="docker-compose up --build"
+alias docb="docker-compose build"
+alias docd="docker-compose down -v"
+alias docs='docker stop $(docker ps -a -q)'
+alias docr='docker rm $(docker ps -a -q)'
+
+source ~/z.sh
+
+# PATH exports
+export DOTNET_ROOT=$HOME/.dotnet
+export PATH=$PATH:$DOTNET_ROOT:$DOTNET_ROOT/tools
+export GOPATH="$HOME/go"
+export GOROOT="$(brew --prefix golang)/libexec"
+export PATH="$PATH:$GOPATH/bin:$GOROOT/bin"
+export PATH="$HOME/.jenv/bin:$PATH"
+export PATH="$HOME/.jenv/shims:$PATH"
+eval "$(jenv init -)"
+
+# pnpm
+export PNPM_HOME="/Users/liam/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+
+eval "$(direnv hook zsh)"
+eval "$(starship init zsh)"   # must be last
+```
+
+After any change to `.zshrc`:
+
+```sh
+source ~/.zshrc
+```
+
+## VS Code
+
+### Extensions
+
+Install all extensions automatically:
+
+```sh
+cat ~/.dotfiles/code/extensions.sh | bash
+```
+
+Extensions included:
+
+- [Anthropic Claude Code](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code)
+- [Auto Hide](https://marketplace.visualstudio.com/items?itemName=sirmspencer.vscode-autohide)
+- [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker)
+- [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker)
+- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
+- [ES7+ React/Redux Snippets](https://marketplace.visualstudio.com/items?itemName=dsznajder.es7-react-js-snippets)
+- [GitHub Dark Default](https://marketplace.visualstudio.com/items?itemName=GitHub.github-vscode-theme)
+- [Go](https://marketplace.visualstudio.com/items?itemName=golang.Go)
+- [HCL](https://marketplace.visualstudio.com/items?itemName=HashiCorp.HCL)
+- [HCL Format](https://marketplace.visualstudio.com/items?itemName=fredwangwang.vscode-hcl-format)
+- [markdownlint](https://marketplace.visualstudio.com/items?itemName=DavidAnson.vscode-markdownlint)
+- [MDX](https://marketplace.visualstudio.com/items?itemName=unifiedjs.vscode-mdx)
+- [.NET C# Dev Kit](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit)
+- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+- [Pretty TypeScript Errors](https://marketplace.visualstudio.com/items?itemName=yoavbls.pretty-ts-errors)
+- [React Refactor](https://marketplace.visualstudio.com/items?itemName=planbcoding.vscode-react-refactor)
+- [Simple React Snippets](https://marketplace.visualstudio.com/items?itemName=burkeholland.simple-react-snippets)
+- [Status Bar Format Toggle](https://marketplace.visualstudio.com/items?itemName=tombonnike.vscode-status-bar-format-toggle)
+- [Terraform](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform)
+- [TypeScript Nightly](https://marketplace.visualstudio.com/items?itemName=ms-vscode.vscode-typescript-next)
+- [vscode-icons](https://marketplace.visualstudio.com/items?itemName=vscode-icons-team.vscode-icons)
+- [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)
+
+### Keybindings
+
+```json
+[
+  { "key": "ctrl+up",   "command": "cursorMove", "args": { "to": "up",   "by": "line", "value": 10 } },
+  { "key": "ctrl+down", "command": "cursorMove", "args": { "to": "down", "by": "line", "value": 10 } }
+]
+```
+
+### Settings
+
+```json
+{
+    "workbench.colorTheme": "GitHub Dark Default",
+    "workbench.iconTheme": "vscode-icons",
+    "workbench.sideBar.location": "right",
+    "workbench.activityBar.location": "hidden",
+    "workbench.statusBar.visible": true,
+    "workbench.startupEditor": "none",
+    "workbench.editor.showTabs": "none",
+    "workbench.editor.enablePreview": false,
+    "editor.fontFamily": "Hack Nerd Font Mono",
+    "editor.fontSize": 14,
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.minimap.enabled": false,
+    "editor.stickyScroll.enabled": false,
+    "editor.renderWhitespace": "none",
+    "editor.formatOnSave": false,
+    "editor.inlineSuggest.enabled": true,
+    "editor.lineNumbers": "on",
+    "workbench.colorCustomizations": {
+        "editor.lineHighlightBackground": "#102032"
+    },
+    "files.associations": {
+        ".env*": "makefile"
+    },
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+            {
+                "scope": "string.quoted.double.env, string.quoted.single.env",
+                "settings": { "foreground": "#00000000" }
+            }
+        ]
+    },
+    "[javascript]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascriptreact]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[astro]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "explicit"
+    },
+    "cSpell.enableFiletypes": ["mdx"]
+}
+```
+
+## Git
+
+Git config is symlinked from `~/.dotfiles/git/.gitconfig`:
+
+```sh
+ln -sfv ~/.dotfiles/git/.gitconfig ~
+```
+
+Key configuration:
+
+```sh
+# Identity
+git config --global user.name "Liam Beeton"
+git config --global user.email "liam.beeton@gmail.com"
+
+# Editor
+git config --global core.editor "code --wait"
+
+# Default branch
+git config --global init.defaultBranch main
+
+# Better diff pager (git-delta)
+git config --global core.pager "delta"
+git config --global delta.side-by-side true
+git config --global delta.line-numbers true
+git config --global delta.decorations true
+
+# Use VS Code for diffs and merges
+git config --global diff.tool vscode
+git config --global merge.tool vscode
+
+# Useful aliases
+git config --global alias.st "status"
+git config --global alias.lg "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
+```
+
+### Commit Message Template
+
+The commit template at `~/.gitmessage.txt` enforces a consistent format:
+
+- Imperative mood in subject line (e.g. "Add feature" not "Added feature")
+- 72-character line limit
+- Separate subject from body with a blank line
+- Reference issues or tickets in the footer
+
+## SSH
+
+One SSH key per service. Example for GitHub:
+
+```sh
+mkdir -p ~/.ssh
+cd ~/.ssh
+
+# Generate key
+ssh-keygen -t ed25519 -C "github"
+# File name: github
+# Set a passphrase and store it in 1Password
+```
+
+Verify the passphrase:
+
+```sh
+ssh-keygen -y -f github
+```
+
+Add to `~/.ssh/config`:
+
+```sh
+Host *
+  AddKeysToAgent yes
+  UseKeychain yes
+  IdentityFile ~/.ssh/github
+```
+
+Add to macOS keychain:
+
+```sh
+ssh-add --apple-use-keychain ~/.ssh/github
+```
+
+Add the public key to GitHub:
+
+```sh
+cat ~/.ssh/github.pub | pbcopy
+# Paste at https://github.com/settings/ssh/new
+
+# Or via GitHub CLI
+gh auth login
+gh ssh-key add ~/.ssh/github.pub -t github
+```
+
+## Node.js via Volta
+
+[Volta](https://volta.sh) pins Node versions per project and manages global tools cleanly:
+
+```sh
+# Install Volta
+curl https://get.volta.sh | bash
+source ~/.zshenv
+
+# Install latest LTS Node
+volta install node
+```
+
+Check versions:
+
+```sh
+node -v && npm -v
+```
+
+Install global npm tools:
+
+```sh
+npm install -g \
+  eslint \
+  http-server \
+  nodemon \
+  pnpm \
+  release-it \
+  typescript \
+  yarn
+```
+
+Pin a Node version to a specific project:
+
+```sh
+cd my-project
+volta pin node@22
+```
+
+This writes a `volta` field to `package.json` so anyone on the project gets the same Node version automatically.
+
+---
+
+*Source: [github.com/liambeeton/dotfiles](https://github.com/liambeeton/dotfiles)*
