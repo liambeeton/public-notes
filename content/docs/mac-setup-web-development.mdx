@@ -24,6 +24,10 @@ curl -#L https://github.com/liambeeton/dotfiles/tarball/master | tar -xzv -C ~/.
 
 The script applies macOS defaults, installs Homebrew, CLI packages, GUI apps, Oh My Zsh, VS Code extensions, Git config, and Node via Volta — in order.
 
+<Callout type="warn" title="Run this on a fresh machine">
+  The install script overwrites `.zshrc`, `.gitconfig`, and VS Code settings. It's designed for a clean macOS install — running it on an existing machine may clobber config you want to keep.
+</Callout>
+
 ## MacBook Specification
 
 - MacBook Pro 16-inch (M4 Max)
@@ -69,6 +73,10 @@ defaults write com.apple.finder AppleShowAllFiles YES
 defaults write com.apple.finder ShowPathbar -bool true
 defaults write com.apple.finder ShowStatusBar -bool true
 ```
+
+<Callout type="info">
+  Run `killall Finder` after applying these defaults to pick up the changes immediately — no reboot needed.
+</Callout>
 
 ## Hostname
 
@@ -185,7 +193,7 @@ brew install --cask \
 - **1Password** — password manager; enable Touch ID
 - **Arq** — local and cloud backups
 - **Bartender** — menu bar management
-- **Raycast** — Spotlight replacement; bind to CMD + Space (disable Spotlight shortcut first); enable File Search, Snippets, System
+- **Raycast** — Spotlight replacement; bind to CMD + Space; enable File Search, Snippets, System
 - **Brave** — primary browser for personal browsing
 - **Google Chrome** — web development; enable dark mode; DevTools → dark mode; Network → Fetch/XHR only
 - **Firefox** — secondary browser for dev testing
@@ -209,6 +217,10 @@ brew install --cask \
 - **Wireshark** — network packet analysis
 - **Yubico Authenticator** — hardware 2FA with YubiKey
 - **Zoom** — video calls
+
+<Callout type="info" title="Raycast shortcut">
+  Before binding Raycast to `⌘ Space`, disable the Spotlight shortcut first: System Preferences → Keyboard → Keyboard Shortcuts → Spotlight → uncheck "Show Spotlight search".
+</Callout>
 
 ## iTerm2
 
@@ -247,6 +259,10 @@ wget https://raw.githubusercontent.com/rupa/z/master/z.sh -O ~/z.sh
 ```
 
 ### Starship Theme
+
+<Callout type="info">
+  Starship must be the **last line** in `.zshrc`. The config below already has `eval "$(starship init zsh)"` at the end — don't move it.
+</Callout>
 
 Install Starship via Homebrew (already in the brew list above), then activate it:
 
@@ -489,6 +505,10 @@ The commit template at `~/.gitmessage.txt` enforces a consistent format:
 
 One SSH key per service. Example for GitHub:
 
+<Callout type="warn" title="Save your passphrase first">
+  When prompted, set a strong passphrase and save it in 1Password immediately. You'll need it whenever the SSH agent restarts (e.g. after a reboot).
+</Callout>
+
 ```sh
 mkdir -p ~/.ssh
 cd ~/.ssh
@@ -571,6 +591,10 @@ volta pin node@22
 ```
 
 This writes a `volta` field to `package.json` so anyone on the project gets the same Node version automatically.
+
+<Callout type="idea" title="Why Volta over nvm?">
+  Volta switches Node versions automatically when you `cd` into a project — no `nvm use` needed. The pinned version is stored in `package.json` so the whole team stays in sync without any extra setup.
+</Callout>
 
 ---
 
