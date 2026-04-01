@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.2.2",
+    "@vercel/analytics": "^2.0.1",
     "fumadocs-core": "^16.7.8",
     "fumadocs-mdx": "^14.2.11",
     "fumadocs-ui": "^16.7.8",
