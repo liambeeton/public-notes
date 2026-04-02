@@ -1,32 +1,37 @@
-import type { ReactNode } from 'react';
-import type { Metadata } from 'next';
-import { RootProvider } from 'fumadocs-ui/provider/next';
-import { Analytics } from '@vercel/analytics/next';
-import './globals.css';
+import type { ReactNode } from "react";
+import type { Metadata } from "next";
+import { RootProvider } from "fumadocs-ui/provider/next";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://notes.liambeeton.com'),
+  metadataBase: new URL("https://notes.liambeeton.com"),
   title: {
-    template: '%s | Liam\'s Public Notes',
-    default: 'Liam\'s Public Notes',
+    template: "%s | Liam's Public Notes",
+    default: "Liam's Public Notes",
   },
-  description: 'A non-linear place full of ideas, research and work on software development, trail running, mountain biking, photography, and more.',
+  description:
+    "A non-linear place full of ideas, research and work on software development, trail running, mountain biking, photography, and more.",
   openGraph: {
-    type: 'website',
-    siteName: 'Liam\'s Public Notes',
-    locale: 'en_ZA',
+    type: "website",
+    siteName: "Liam's Public Notes",
+    locale: "en_ZA",
   },
   twitter: {
-    card: 'summary_large_image',
+    card: "summary_large_image",
   },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <body
+        style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
+      >
         <RootProvider>{children}</RootProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
