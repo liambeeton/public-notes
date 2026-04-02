@@ -6,7 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://notes.liambeeton.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://notes.liambeeton.com"),
   title: {
     template: "%s | Liam's Public Notes",
     default: "Liam's Public Notes",
@@ -26,9 +26,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
-      >
+      <body className="flex flex-col min-h-screen">
         <RootProvider>{children}</RootProvider>
         <Analytics />
         <SpeedInsights />
