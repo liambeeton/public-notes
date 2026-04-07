@@ -1,6 +1,8 @@
 {
   "title": "Notes",
   "pages": [
-    "index"
+    "index",
+    "about",
+    "mac-setup-web-development"
   ]
 }
