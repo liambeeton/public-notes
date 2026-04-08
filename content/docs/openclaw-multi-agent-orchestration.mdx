@@ -1,0 +1,389 @@
+---
+title: OpenClaw Multi-Agent Orchestration
+description: Notes on when to use multi-agent routing in OpenClaw, plus a practical setup guide for bindings, isolated workspaces, and an orchestrator-worker pattern.
+---
+
+This note is based on Zen van Riel's article, [OpenClaw Multi-Agent Orchestration Advanced Guide](https://zenvanriel.com/ai-engineer-blog/openclaw-multi-agent-orchestration-guide/), with extra implementation detail from the OpenClaw docs so you can actually set it up.
+
+## Core idea
+
+The main takeaway from the article is that most people should start with a single agent, not a "dream team" of many agents. In OpenClaw, a single agent already gets you a lot:
+
+- One workspace with its own prompts, memories, and skills
+- One isolated `agentDir` with agent-specific config and auth profiles
+- One isolated session store
+- One auth boundary, so credentials do not leak between agents
+
+That isolation is the reason multi-agent setups can work well, but it is also the reason they add overhead. Add a second agent only when you need a real boundary such as:
+
+- Different security contexts
+- Different channels or accounts that should behave differently
+- Different model tiers for cost or latency reasons
+- Different work domains such as "research" vs "coding"
+
+<Callout type="warn" title="Do not split agents too early">
+  If a second agent exists only because you want a different tone or prompt, keep it as one agent for now. In OpenClaw, a new agent creates a real isolation boundary with its own workspace, auth state, and session history, which means more setup and more debugging surface area.
+</Callout>
+
+## What counts as an agent in OpenClaw
+
+In practice, an OpenClaw agent is more than a prompt. It is the combination of:
+
+- `workspace`: files the agent reads and writes, including `AGENTS.md`, skills, notes, and memory-like material
+- `agentDir`: per-agent state such as auth profiles and configuration
+- `sessions`: isolated conversation history and routing state
+
+This is why separate agents are the right tool for isolation, but the wrong tool for simple prompt variation.
+
+## Start with the baseline setup
+
+Bootstrap OpenClaw first:
+
+```sh
+openclaw onboard --install-daemon
+```
+
+Or, if you want a lighter bootstrap:
+
+```sh
+openclaw setup
+openclaw gateway status
+openclaw dashboard
+```
+
+Useful paths to know:
+
+- Config: `~/.openclaw/openclaw.json`
+- Default workspace: `~/.openclaw/workspace`
+- Per-agent auth: `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
+- Per-agent sessions: `~/.openclaw/agents/<agentId>/sessions/`
+
+## Single-agent mode first
+
+Before introducing multiple agents, make sure a single agent can already do the job. A simple setup might look like:
+
+```jsonc
+{
+  agents: {
+    list: [
+      {
+        id: "main",
+        default: true,
+        workspace: "~/.openclaw/workspace"
+      }
+    ]
+  },
+  gateway: {
+    mode: "local"
+  }
+}
+```
+
+This keeps everything easy to debug and gives you one place to refine prompts, memory, tools, and model config.
+
+<Callout type="info" title="Single-agent is the control case">
+  Get one agent working well before you introduce routing. That gives you a clean baseline, so when multi-agent behavior goes wrong you can tell whether the issue is your prompts, your bindings, or the delegation design.
+</Callout>
+
+## Add a second agent only for isolation
+
+The cleanest first multi-agent setup is usually "general" plus one specialist. For example:
+
+- `main`: daily chat, broad assistant behavior
+- `coder`: coding-focused behavior, repo access, stronger coding model
+
+OpenClaw lets you assign a different default model per agent. You can do that either when creating the agent:
+
+```sh
+openclaw agents add coder \
+  --workspace ~/.openclaw/workspace-coder \
+  --model openai/gpt-5 \
+  --non-interactive
+```
+
+Or by setting `agents.list[].model` in `~/.openclaw/openclaw.json`.
+
+Create the extra agent with the CLI:
+
+```sh
+openclaw agents add coder --workspace ~/.openclaw/workspace-coder
+openclaw agents list --bindings
+```
+
+Then wire explicit bindings in `~/.openclaw/openclaw.json`:
+
+```jsonc
+{
+  agents: {
+    list: [
+      {
+        id: "main",
+        default: true,
+        name: "Main",
+        workspace: "~/.openclaw/workspace-main",
+        agentDir: "~/.openclaw/agents/main/agent",
+        model: "anthropic/claude-opus-4-6"
+      },
+      {
+        id: "coder",
+        name: "Coder",
+        workspace: "~/.openclaw/workspace-coder",
+        agentDir: "~/.openclaw/agents/coder/agent",
+        model: "openai/gpt-5"
+      }
+    ]
+  },
+  bindings: [
+    { agentId: "main", match: { channel: "whatsapp", accountId: "*" } },
+    { agentId: "coder", match: { channel: "telegram", accountId: "*" } }
+  ],
+  gateway: {
+    mode: "local"
+  }
+}
+```
+
+This means WhatsApp goes to `main`, Telegram goes to `coder`, and each keeps separate sessions, memory, and auth.
+
+You can inspect what model and auth state a given agent resolves to with:
+
+```sh
+openclaw models status --agent main
+openclaw models status --agent coder
+```
+
+## How bindings actually route
+
+OpenClaw routing is deterministic and specific matches win. The docs describe the rough precedence like this:
+
+1. `peer` match
+2. `parentPeer` match
+3. `guildId + roles` or other channel-specific high-specificity matches
+4. `guildId` or `teamId`
+5. `accountId`
+6. Channel-level fallback
+7. Default agent fallback
+
+Important details:
+
+- If `accountId` is omitted, the binding matches the default account only
+- Use `accountId: "*"` when you want a rule across all accounts for that channel
+- If multiple bindings match at the same specificity tier, config order decides the winner
+
+That means you should put narrow overrides before broad defaults.
+
+## Practical routing examples
+
+### Two WhatsApp accounts, two agents
+
+```jsonc
+{
+  agents: {
+    list: [
+      {
+        id: "home",
+        default: true,
+        workspace: "~/.openclaw/workspace-home",
+        agentDir: "~/.openclaw/agents/home/agent"
+      },
+      {
+        id: "work",
+        workspace: "~/.openclaw/workspace-work",
+        agentDir: "~/.openclaw/agents/work/agent"
+      }
+    ]
+  },
+  bindings: [
+    { agentId: "home", match: { channel: "whatsapp", accountId: "personal" } },
+    { agentId: "work", match: { channel: "whatsapp", accountId: "biz" } }
+  ],
+  channels: {
+    whatsapp: {
+      accounts: {
+        personal: {},
+        biz: {}
+      }
+    }
+  }
+}
+```
+
+### One channel with a peer-specific override
+
+```jsonc
+{
+  bindings: [
+    { agentId: "main", match: { channel: "discord", accountId: "*" } },
+    {
+      agentId: "coder",
+      match: {
+        channel: "discord",
+        accountId: "*",
+        peer: { kind: "channel", id: "dev-room" }
+      }
+    }
+  ]
+}
+```
+
+This sends the `dev-room` channel to `coder` while everything else still goes to `main`.
+
+## Orchestrator plus workers
+
+The article's most useful advanced pattern is one strong orchestrator plus narrower workers. In OpenClaw, the most practical way to do that is often:
+
+- An orchestrator agent as the public entry point
+- One or more workers with their own workspaces
+- ACP-backed workers for tools like Codex or Claude Code when you want specialist coding or IDE-style execution
+- Explicit routing boundaries, instead of letting every agent handle everything
+
+### Model assignment strategy
+
+This is the most important operational rule in a multi-agent setup:
+
+- Your main model should almost never do the heavy work directly
+- Your main model should plan, route, and synthesize
+- Cheaper or faster sub-agents should execute the long-running or repetitive work
+
+In other words, treat the top-level agent like a tech lead or dispatcher, not like the engineer doing every task itself.
+
+<Callout type="idea" title="Use premium models as planners">
+  The expensive model earns its keep by choosing the right work, sequencing it well, and checking the output. It is usually a poor use of budget to spend premium-model tokens on repetitive implementation, broad search, or long-running tool execution that a cheaper worker can do.
+</Callout>
+
+Why this works well:
+
+- Lower cost: the orchestrator spends tokens mostly on planning and review, not on every implementation step
+- Better latency: worker agents can respond faster on bounded tasks
+- Clearer traces: it is easier to debug a planner handing off work than one giant monolithic run
+- Better specialization: research, coding, and summarization can each use a better-fit model
+- Safer context windows: the orchestrator keeps the high-level goal while workers handle narrower local context
+
+The tradeoff is that every delegated run still consumes tokens and coordination adds overhead. This pattern pays off most when tasks are long, parallelizable, or specialized.
+
+### A good default model split
+
+A practical split in OpenClaw looks like this:
+
+- `orchestrator`: strongest reasoning model you trust for planning and review
+- `coder`: faster coding-capable model for implementation, fixes, and tests
+- `research`: lower-cost synthesis or browsing model for information gathering
+- `summarizer` or `triage`: cheapest acceptable model for classification, tagging, or first-pass cleanup
+
+The exact providers can vary, but the role split matters more than the brand.
+
+An OpenClaw-flavoured setup can look like:
+
+```jsonc
+{
+  agents: {
+    list: [
+      {
+        id: "orchestrator",
+        default: true,
+        workspace: "~/.openclaw/workspace-orchestrator",
+        agentDir: "~/.openclaw/agents/orchestrator/agent",
+        model: "anthropic/claude-opus-4-6"
+      },
+      {
+        id: "research",
+        workspace: "~/.openclaw/workspace-research",
+        agentDir: "~/.openclaw/agents/research/agent",
+        model: "anthropic/claude-sonnet-4-5"
+      },
+      {
+        id: "codex-worker",
+        workspace: "~/.openclaw/workspace-codex",
+        agentDir: "~/.openclaw/agents/codex-worker/agent",
+        runtime: {
+          type: "acp",
+          acp: {
+            agent: "codex",
+            backend: "acpx",
+            mode: "persistent",
+            cwd: "/workspace/project"
+          }
+        }
+      }
+    ]
+  },
+  bindings: [
+    { agentId: "orchestrator", match: { channel: "telegram", accountId: "*" } }
+  ],
+  tools: {
+    agentToAgent: {
+      enabled: true,
+      allow: ["orchestrator", "research", "codex-worker"]
+    }
+  }
+}
+```
+
+You can also add model-specific workers without ACP, but ACP-backed workers are the more direct fit when you want an external coding harness.
+
+The important part is the architecture:
+
+- The orchestrator is the public entry point
+- Workers do bounded tasks
+- Agent-to-agent messaging is explicitly enabled and allowlisted
+- Each worker has its own workspace and auth boundary
+- ACP workers can have their own `cwd`, backend, and runtime defaults
+
+### Example delegation policy
+
+If you want this to stay disciplined, define a policy in the orchestrator's `AGENTS.md` such as:
+
+```md
+- Do not perform heavy implementation directly.
+- Break complex requests into subtasks.
+- Delegate coding changes to `codex-worker`.
+- Delegate fact gathering and synthesis to `research`.
+- Only keep planning, prioritization, and final answer composition in the orchestrator.
+```
+
+That one rule prevents the most common failure mode: paying premium-model prices for work a cheaper worker could have handled.
+
+## How I would set this up in practice
+
+If I were building this from scratch in OpenClaw, I would do it in this order:
+
+1. Run `openclaw onboard --install-daemon` and verify `openclaw dashboard` works.
+2. Keep one agent only until prompts, tools, and memory behavior feel stable.
+3. Add a second agent with `openclaw agents add <id> --workspace <dir>`.
+4. Add bindings and verify routing with `openclaw agents list --bindings`.
+5. Put different instructions in each workspace's `AGENTS.md` so the separation is meaningful.
+6. Assign a model per agent based on role, not prestige.
+7. Give each agent only the auth and tool access it really needs.
+8. Enable `tools.agentToAgent` only when the orchestrator needs to delegate.
+9. Add one worker at a time and test after every change.
+
+That incremental path matches both the article's advice and the OpenClaw model: isolation first, complexity second.
+
+## Design rules that keep this maintainable
+
+- Prefer a single default agent unless you can name the boundary you need.
+- Split agents by security boundary, tool boundary, or model/cost boundary.
+- Reserve premium models for planning, adjudication, and high-stakes reasoning.
+- Push repetitive execution into cheaper or faster workers.
+- Keep bindings explicit. Do not rely on fuzzy assumptions about routing.
+- Use peer-specific overrides sparingly because they are easy to forget later.
+- Treat each workspace as a separately owned persona and operating context.
+- Document why each agent exists before adding another one.
+
+## A good first multi-agent configuration
+
+For most people, this is enough:
+
+- `main` for general requests
+- `coder` for development-heavy tasks
+- `research` only if browsing, synthesis, or knowledge gathering needs a separate tool or auth profile
+
+That gives you most of the upside without turning your OpenClaw instance into a hard-to-debug mesh.
+
+## Sources
+
+- [Zen van Riel, OpenClaw Multi-Agent Orchestration Advanced Guide](https://zenvanriel.com/ai-engineer-blog/openclaw-multi-agent-orchestration-guide/)
+- [OpenClaw Docs: Multi-Agent Routing](https://docs.openclaw.ai/concepts/multi-agent)
+- [OpenClaw Docs: `openclaw agents`](https://docs.openclaw.ai/cli/agents)
+- [OpenClaw Docs: `openclaw setup`](https://docs.openclaw.ai/cli/setup)
+- [OpenClaw Docs: Getting Started](https://docs.openclaw.ai/start/quickstart)
