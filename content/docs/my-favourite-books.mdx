@@ -1,0 +1,90 @@
+---
+title: My Favourite Books
+description: A shortlist of software books I keep returning to, with cover images and Goodreads links.
+---
+
+import Image from 'next/image';
+
+These are the software books I keep coming back to. Some helped shape how I think about
+software architecture and systems design, others pushed me to care more deeply about
+craftsmanship, professionalism, and building a durable career in software.
+
+They are listed here in no particular order.
+
+<div className="not-prose mt-8 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
+  {[
+    {
+      url: 'https://www.goodreads.com/book/show/6399113-the-passionate-programmer',
+      image: '/book-covers/the-passionate-programmer.jpg',
+      title:
+        'The Passionate Programmer: Creating a Remarkable Career in Software Development',
+    },
+    {
+      url: 'https://www.goodreads.com/book/show/179133.Domain_Driven_Design',
+      image: '/book-covers/domain-driven-design.jpg',
+      title: 'Domain-Driven Design: Tackling Complexity in the Heart of Software',
+    },
+    {
+      url: 'https://www.goodreads.com/book/show/70156.Patterns_of_Enterprise_Application_Architecture',
+      image: '/book-covers/patterns-of-enterprise-application-architecture.jpg',
+      title: 'Patterns of Enterprise Application Architecture',
+    },
+    {
+      url: 'https://www.goodreads.com/book/show/23463279-designing-data-intensive-applications',
+      image: '/book-covers/designing-data-intensive-applications.jpg',
+      title: 'Designing Data-Intensive Applications',
+    },
+    {
+      url: 'https://www.goodreads.com/book/show/17255186-the-phoenix-project',
+      image: '/book-covers/the-phoenix-project.jpg',
+      title:
+        'The Phoenix Project: A Novel About IT, DevOps, and Helping Your Business Win',
+    },
+    {
+      url: 'https://www.goodreads.com/book/show/23215733-software-craftsman-the',
+      image: '/book-covers/software-craftsman.jpg',
+      title: 'Software Craftsman, The: Professionalism, Pragmatism, Pride',
+    },
+    {
+      url: 'https://www.goodreads.com/book/show/18043011-clean-architecture',
+      image: '/book-covers/clean-architecture.jpg',
+      title: 'Clean Architecture',
+    },
+    {
+      url: 'https://www.goodreads.com/book/show/4099.The_Pragmatic_Programmer',
+      image: '/book-covers/the-pragmatic-programmer.jpg',
+      title: 'The Pragmatic Programmer: From Journeyman to Master',
+    },
+    {
+      url: 'https://www.goodreads.com/book/show/4845.Code_Complete',
+      image: '/book-covers/code-complete.jpg',
+      title: 'Code Complete: A Practical Handbook of Software Construction',
+    },
+    {
+      url: 'https://www.goodreads.com/book/show/3735293-clean-code',
+      image: '/book-covers/clean-code.jpg',
+      title: 'Clean Code: A Handbook of Agile Software Craftsmanship',
+    },
+  ].map((book) => (
+    <a
+      key={book.url}
+      href={book.url}
+      target="_blank"
+      rel="noreferrer"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
+    >
+      <Image
+        src={book.image}
+        alt={book.title}
+        width={300}
+        height={400}
+        className="aspect-[3/4] w-full object-cover"
+      />
+      <div className="flex flex-1 flex-col p-3">
+        <h2 className="text-base font-semibold leading-snug text-zinc-900 dark:text-zinc-100">
+          {book.title}
+        </h2>
+      </div>
+    </a>
+  ))}
+</div>
