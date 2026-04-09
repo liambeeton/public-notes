@@ -6,6 +6,7 @@
     "my-favourite-books",
     "mac-setup-web-development",
     "job-interview-questions",
-    "openclaw-multi-agent-orchestration"
+    "openclaw-multi-agent-orchestration",
+    "grpc-mtls-go"
   ]
 }
